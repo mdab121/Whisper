@@ -1,19 +1,25 @@
 import UIKit
 
-let shoutView = ShoutView()
+//Co za kotlet.
+//let shoutView = ShoutView()
 
-public func shout(announcement: Announcement, to: UIViewController, completion: (() -> ())? = {}) {
-  shoutView.craft(announcement, to: to, completion: completion)
-}
+//Kolejny kotlet
+//public func shout(announcement: Announcement, to: UIViewController, completion: (() -> ())? = {}) {
+//  shoutView.craft(announcement, to: to, completion: completion)
+//}
 
-public class ShoutView: UIView {
+public final class ShoutView: UIView {
+  
+  public class func shout(announcement: Announcement, to: UIViewController, completion: (() -> ())? = {}) {
+    ShoutView().craft(announcement, to: to, completion: completion)
+  }
 
   public struct Dimensions {
-    public static let indicatorHeight: CGFloat = 6
-    public static let indicatorWidth: CGFloat = 50
+    public static let indicatorHeight: CGFloat = 4
+    public static let indicatorWidth: CGFloat = 29
     public static let imageSize: CGFloat = 48
     public static let imageOffset: CGFloat = 18
-    public static var height: CGFloat = UIApplication.sharedApplication().statusBarHidden ? 70 : 80
+    public static var height: CGFloat = UIApplication.sharedApplication().statusBarHidden ? 70 : 84
     public static var textOffset: CGFloat = 75
 	public static var textMargin: CGFloat = 18
   }
@@ -26,6 +32,14 @@ public class ShoutView: UIView {
 
     return view
     }()
+
+	public private(set) lazy var lineView: UIView = {
+		let view = UIView()
+		view.backgroundColor = UIColor.redColor()
+		view.userInteractionEnabled = false
+		
+		return view
+	}()
 
   public private(set) lazy var gestureContainer: UIView = {
     let view = UIView()
@@ -52,7 +66,7 @@ public class ShoutView: UIView {
     let label = UILabel()
     label.font = FontList.Shout.title
     label.textColor = ColorList.Shout.title
-    label.numberOfLines = 2
+    label.numberOfLines = 1
 
     return label
     }()
@@ -61,7 +75,7 @@ public class ShoutView: UIView {
     let label = UILabel()
     label.font = FontList.Shout.subtitle
     label.textColor = ColorList.Shout.subtitle
-    label.numberOfLines = 2
+    label.numberOfLines = 1
 
     return label
     }()
@@ -92,7 +106,7 @@ public class ShoutView: UIView {
     super.init(frame: frame)
 
     addSubview(backgroundView)
-    [indicatorView, imageView, titleLabel, subtitleLabel, gestureContainer].forEach {
+    [indicatorView, imageView, titleLabel, subtitleLabel, gestureContainer, lineView].forEach {
       backgroundView.addSubview($0) }
 
     clipsToBounds = false
@@ -119,7 +133,7 @@ public class ShoutView: UIView {
   // MARK: - Configuration
 
   public func craft(announcement: Announcement, to: UIViewController, completion: (() -> ())?) {
-    Dimensions.height = UIApplication.sharedApplication().statusBarHidden ? 70 : 80
+    Dimensions.height = UIApplication.sharedApplication().statusBarHidden ? 70 : 84
 
     panGestureActive = false
     shouldSilent = false
@@ -163,11 +177,13 @@ public class ShoutView: UIView {
     let textOffsetX: CGFloat = imageView.image != nil ? Dimensions.textOffset : 18
 	let textMargin: CGFloat = Dimensions.textMargin
 	let imageSize: CGSize = imageView.image?.size ?? CGSize.zero
+    let lineHeight: CGFloat = 1
 
     backgroundView.frame.size = CGSize(width: totalWidth, height: Dimensions.height)
+    lineView.frame = CGRect(origin: CGPoint(x: 0, y: backgroundView.bounds.size.height - lineHeight), size: CGSize(width: backgroundView.bounds.size.width, height: lineHeight))
     gestureContainer.frame = CGRect(x: 0, y: Dimensions.height - 20, width: totalWidth, height: 20)
     indicatorView.frame = CGRect(x: (totalWidth - Dimensions.indicatorWidth) / 2,
-      y: Dimensions.height - Dimensions.indicatorHeight - 5, width: Dimensions.indicatorWidth, height: Dimensions.indicatorHeight)
+      y: Dimensions.height - Dimensions.indicatorHeight - 8, width: Dimensions.indicatorWidth, height: Dimensions.indicatorHeight)
 
     imageView.frame = CGRect(x: Dimensions.imageOffset, y: (Dimensions.height - imageSize.height) / 2 + offset,
       width: imageSize.width, height: imageSize.height)
