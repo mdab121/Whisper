@@ -70,7 +70,7 @@ public final class ShoutView: UIView {
     let label = UILabel()
     label.font = FontList.Shout.title
     label.textColor = ColorList.Shout.title
-    label.numberOfLines = 1
+    label.numberOfLines = 2
 
     return label
     }()
@@ -79,7 +79,7 @@ public final class ShoutView: UIView {
     let label = UILabel()
     label.font = FontList.Shout.subtitle
     label.textColor = ColorList.Shout.subtitle
-    label.numberOfLines = 1
+    label.numberOfLines = 2
 
     return label
     }()
@@ -191,11 +191,12 @@ public final class ShoutView: UIView {
       width: imageSize.width, height: imageSize.height)
 
     [titleLabel, subtitleLabel].forEach {
-      $0.frame.size.width = totalWidth - imageSize.width - (Dimensions.imageOffset * 2)
+      $0.frame.size.width = totalWidth - imageSize.width - Dimensions.imageOffset - textMargin
       $0.sizeToFit()
     }
 
-    let textOffsetY = imageView.image != nil ? imageView.frame.origin.y + 3 : textOffsetX
+	let accumulatedTextsHeight = titleLabel.frame.height + subtitleLabel.frame.height
+    let textOffsetY = imageView.image != nil ? imageView.frame.midY - accumulatedTextsHeight * 0.5 : textOffsetX
 
     titleLabel.frame.origin = CGPoint(x: imageView.frame.maxX + textMargin, y: textOffsetY)
     subtitleLabel.frame.origin = CGPoint(x: imageView.frame.maxX + textMargin, y: titleLabel.frame.maxY - 1.0)
