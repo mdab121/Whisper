@@ -35,7 +35,7 @@ public final class ShoutView: UIView {
 
 	public private(set) lazy var lineView: UIView = {
 		let view = UIView()
-		view.backgroundColor = UIColor.redColor()
+		view.backgroundColor = ColorList.Shout.line
 		view.userInteractionEnabled = false
 		
 		return view
