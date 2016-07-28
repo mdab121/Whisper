@@ -13,6 +13,8 @@ public final class ShoutView: UIView {
   public class func shout(announcement: Announcement, to: UIViewController, completion: (() -> ())? = {}) {
     ShoutView().craft(announcement, to: to, completion: completion)
   }
+	
+	private let animationDuration: NSTimeInterval = 0.3
 
   public struct Dimensions {
     public static let indicatorHeight: CGFloat = 4
@@ -22,6 +24,8 @@ public final class ShoutView: UIView {
     public static var height: CGFloat = UIApplication.sharedApplication().statusBarHidden ? 70 : 84
     public static var textOffset: CGFloat = 75
 	public static var textMargin: CGFloat = 18
+	public static let touchDraggerPadding: CGFloat = 5.0
+	public static let lineHeight: CGFloat = 1.0
   }
 
   public private(set) lazy var backgroundView: UIView = {
@@ -95,8 +99,7 @@ public final class ShoutView: UIView {
     }()
 
   public private(set) var announcement: Announcement?
-  public private(set) var displayTimer = NSTimer()
-  public private(set) var panGestureActive = false
+  public private(set) var displayTimer: NSTimer?
   public private(set) var shouldSilent = false
   public private(set) var completion: (() -> ())?
 
@@ -135,7 +138,6 @@ public final class ShoutView: UIView {
   public func craft(announcement: Announcement, to: UIViewController, completion: (() -> ())?) {
     Dimensions.height = UIApplication.sharedApplication().statusBarHidden ? 70 : 84
 
-    panGestureActive = false
     shouldSilent = false
     configureView(announcement)
     shout(to: to)
@@ -149,7 +151,7 @@ public final class ShoutView: UIView {
     titleLabel.text = announcement.title
     subtitleLabel.text = announcement.subtitle
 
-    displayTimer.invalidate()
+    displayTimer?.invalidate()
     displayTimer = NSTimer.scheduledTimerWithTimeInterval(announcement.duration,
       target: self, selector: #selector(ShoutView.displayTimerDidFire), userInfo: nil, repeats: false)
 
@@ -160,13 +162,12 @@ public final class ShoutView: UIView {
     let width = UIScreen.mainScreen().bounds.width
     controller.view.addSubview(self)
 
-    frame = CGRect(x: 0, y: 0, width: width, height: 0)
-    backgroundView.frame = CGRect(x: 0, y: 0, width: width, height: 0)
-
-    UIView.animateWithDuration(0.35, animations: {
-      self.frame.size.height = Dimensions.height
-      self.backgroundView.frame.size.height = self.frame.height
-    })
+    frame = CGRect(x: 0, y: -Dimensions.height, width: width, height: Dimensions.height)
+    backgroundView.frame = CGRect(x: 0, y: 0, width: width, height: Dimensions.height)
+	
+	UIView.animateWithDuration(animationDuration, delay: 0.0, options: [.CurveEaseOut], animations: {
+		self.frame.origin = CGPoint.zero
+		}, completion: nil)
   }
 
   // MARK: - Setup
@@ -177,13 +178,14 @@ public final class ShoutView: UIView {
     let textOffsetX: CGFloat = imageView.image != nil ? Dimensions.textOffset : 18
 	let textMargin: CGFloat = Dimensions.textMargin
 	let imageSize: CGSize = imageView.image?.size ?? CGSize.zero
-    let lineHeight: CGFloat = 1
+    let lineHeight: CGFloat = Dimensions.lineHeight
+	let touchDraggerPadding: CGFloat = Dimensions.touchDraggerPadding
 
     backgroundView.frame.size = CGSize(width: totalWidth, height: Dimensions.height)
     lineView.frame = CGRect(origin: CGPoint(x: 0, y: backgroundView.bounds.size.height - lineHeight), size: CGSize(width: backgroundView.bounds.size.width, height: lineHeight))
     gestureContainer.frame = CGRect(x: 0, y: Dimensions.height - 20, width: totalWidth, height: 20)
     indicatorView.frame = CGRect(x: (totalWidth - Dimensions.indicatorWidth) / 2,
-      y: Dimensions.height - Dimensions.indicatorHeight - 8, width: Dimensions.indicatorWidth, height: Dimensions.indicatorHeight)
+      y: Dimensions.height - Dimensions.indicatorHeight - touchDraggerPadding, width: Dimensions.indicatorWidth, height: Dimensions.indicatorHeight)
 
     imageView.frame = CGRect(x: Dimensions.imageOffset, y: (Dimensions.height - imageSize.height) / 2 + offset,
       width: imageSize.width, height: imageSize.height)
@@ -206,14 +208,14 @@ public final class ShoutView: UIView {
   // MARK: - Actions
 
   public func silent() {
-    UIView.animateWithDuration(0.35, animations: {
-      self.frame.size.height = 0
-      self.backgroundView.frame.size.height = self.frame.height
-      }, completion: { finished in
-        self.completion?()
-        self.displayTimer.invalidate()
-        self.removeFromSuperview()
-    })
+	displayTimer?.invalidate()
+	UIView.animateWithDuration(animationDuration, delay: 0.0, options: [.CurveEaseIn], animations: {
+		self.frame.origin.y = -Dimensions.height
+		self.frame.size.height = Dimensions.height
+		}, completion: { finished in
+			self.completion?()
+			self.removeFromSuperview()
+	})
   }
 
   // MARK: - Timer methods
@@ -221,7 +223,6 @@ public final class ShoutView: UIView {
   public func displayTimerDidFire() {
     shouldSilent = true
 
-    if panGestureActive { return }
     silent()
   }
 
@@ -236,28 +237,33 @@ public final class ShoutView: UIView {
   @objc private func handlePanGestureRecognizer() {
     let translation = panGestureRecognizer.translationInView(self)
     var duration: NSTimeInterval = 0
+	self.displayTimer?.invalidate()
 
     if panGestureRecognizer.state == .Changed || panGestureRecognizer.state == .Began {
-      panGestureActive = true
       if translation.y >= 12 {
         frame.size.height = Dimensions.height + 12 + (translation.y) / 25
       } else {
         frame.size.height = Dimensions.height + translation.y
       }
+	  let difference = frame.size.height - Dimensions.height
+	  frame.size.height = max(frame.size.height, Dimensions.height)
+	  frame.origin.y = min(0, difference)
     } else {
-      panGestureActive = false
       let height = translation.y < -5 || shouldSilent ? 0 : Dimensions.height
 
-      duration = 0.2
+      duration = animationDuration * NSTimeInterval(frame.size.height / Dimensions.height)
+	  panGestureRecognizer.view?.removeGestureRecognizer(panGestureRecognizer)
       UIView.animateWithDuration(duration, animations: {
         self.frame.size.height = height
-        }, completion: { _ in if translation.y < -5 { self.completion?(); self.removeFromSuperview() }})
+		self.frame.origin.y = -Dimensions.height
+        }, completion: { _ in  self.completion?(); self.removeFromSuperview() })
     }
 
     UIView.animateWithDuration(duration, animations: {
       self.backgroundView.frame.size.height = self.frame.height
+	  self.lineView.frame = CGRect(origin: CGPoint(x: 0, y: self.backgroundView.bounds.size.height - Dimensions.lineHeight), size: CGSize(width: self.backgroundView.bounds.size.width, height: Dimensions.lineHeight))
       self.gestureContainer.frame.origin.y = self.frame.height - 20
-      self.indicatorView.frame.origin.y = self.frame.height - Dimensions.indicatorHeight - 5
+      self.indicatorView.frame.origin.y = self.frame.height - Dimensions.indicatorHeight - Dimensions.touchDraggerPadding
     })
   }
 
